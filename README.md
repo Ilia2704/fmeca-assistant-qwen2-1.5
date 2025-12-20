@@ -54,7 +54,7 @@ lawer-qwen2-1.5/
 
 Run the model in interactive terminal mode:
 ```bash 
-python cli_chat.py
+python run_local.py
 ```
 Exit with:
 ```bash
