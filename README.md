@@ -37,6 +37,7 @@ python -m pip install -U pip wheel setuptools
 Install project dependencies:
 ```bash 
 pip install -r requirements.txt
+pip install torch==2.9.1 --index-url https://download.pytorch.org/whl/cpu
 ```
 
 ## 2. Project structure
