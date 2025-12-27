@@ -1,5 +1,24 @@
 import streamlit as st
 from chat_core import load, init_history, generate
+import json
+from pathlib import Path
+
+
+CHAT_HISTORY_FILE = Path(".chat_history.json")
+
+def load_chat():
+    if CHAT_HISTORY_FILE.exists():
+        try:
+            return json.loads(CHAT_HISTORY_FILE.read_text(encoding="utf-8"))
+        except Exception:
+            pass
+    return []
+
+def save_chat(ui):
+    CHAT_HISTORY_FILE.write_text(
+        json.dumps(ui, ensure_ascii=False, indent=2),
+        encoding="utf-8"
+    )
 
 @st.cache_resource
 def get_model():
@@ -14,7 +33,13 @@ def main():
     if "history" not in st.session_state:
         st.session_state.history = init_history()
     if "ui" not in st.session_state:
-        st.session_state.ui = []
+        st.session_state.ui = load_chat()
+
+        for m in st.session_state.ui:
+            if m["role"] in ("user", "assistant"):
+                st.session_state.history.append(
+                    {"role": m["role"], "content": m["content"]}
+                )
 
     with st.sidebar:
         do_sample = st.toggle("Sampling", value=False)
@@ -35,6 +60,7 @@ def main():
     user_text = st.chat_input("Type a message…")
     if user_text:
         st.session_state.ui.append({"role": "user", "content": user_text})
+        save_chat(st.session_state.ui)
         with st.chat_message("user"):
             st.markdown(user_text)
 
@@ -51,6 +77,7 @@ def main():
                 st.markdown(answer)
 
         st.session_state.ui.append({"role": "assistant", "content": answer})
+        save_chat(st.session_state.ui)
 
 if __name__ == "__main__":
     main()
