@@ -6,8 +6,8 @@ def get_model():
     return load()
 
 def main():
-    st.set_page_config(page_title="lawer-qwen2-1.5 chat")
-    st.title("lawer-bot chat")
+    st.set_page_config(page_title="assistant-qwen2-1.5 chat")
+    st.title("assistant-bot chat")
 
     tokenizer, model = get_model()
 

@@ -1,15 +1,15 @@
-# lawer-qwen2-1.5
-The small llm with inference, trained to catch discrepancies in contracts (deployed on Ubuntu 24.04.3 LTS)
+# fmeca-assistant-qwen2-1.5
+The small llm with inference, trained to propose cause and effects of the failure (deployed on Ubuntu 24.04.3 LTS)
 The project implements an AI-powered legal assistant based on **Qwen/Qwen2-1.5B-Instruct**.
 
-The goal of the system is to **analyze incoming contracts and agreements for compliance with applicable laws and regulations**.  
-Legal norms, articles, and interpretations are stored in a **Qdrant vector database** and used as an external knowledge base.
-
-The bot operates in a Retrieval-Augmented Generation (RAG) setup:
-- incoming contracts are parsed and segmented,
-- relevant legal provisions are retrieved from Qdrant via semantic search,
-- the language model analyzes the contract against the retrieved laws,
-- the output highlights potential inconsistencies, risks, or non-compliant clauses.
+The goal of the system is to support Failure Modes, Effects, and Criticality Analysis (FMECA) by assisting engineers in the identification, structuring, and assessment of potential failure scenarios in complex systems.
+Domain knowledge such as failure modes, effects, causes, detection methods, and severity/occurrence considerations is stored in a vector-based knowledge base and used as external contextual grounding.
+The assistant operates in a Retrieval-Augmented Generation (RAG) setup:
+- system descriptions or components are parsed and structured,
+- relevant FMECA-related knowledge (failure patterns, typical effects, mitigation strategies) is retrieved via semantic search,
+- the language model performs context-aware reasoning over the retrieved information,
+- the output highlights potential failure modes, associated effects, risk drivers, and areas requiring expert attention.
+The system is intended as a decision-support tool for reliability and safety analysis, helping engineers reason more systematically while keeping final judgments under human control.
 
 The project is designed to be:
 - modular (CLI, API, and web UI),
