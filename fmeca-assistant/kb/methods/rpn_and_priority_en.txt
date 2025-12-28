@@ -1,0 +1,9 @@
+RPN Limitations:
+Equal RPN values may represent very different risks.
+
+Best Practice:
+- High Severity (S ≥ 9) always requires action.
+- Poor Detection (D ≥ 8) requires diagnostic improvement.
+- High Occurrence (O ≥ 7) requires root cause elimination.
+
+Action Priority is preferred over raw RPN.

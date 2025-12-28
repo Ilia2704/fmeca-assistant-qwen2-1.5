@@ -1,0 +1,13 @@
+Basic FMECA Rules:
+
+1. Define scope and system boundaries.
+2. Identify system structure and functions.
+3. Identify failure modes for each function.
+4. Describe effects at:
+   - local level
+   - system level
+   - end-user / safety / business level
+5. Identify causes and existing controls.
+6. Assign S, O, D using consistent scales.
+7. Prioritize actions, not numbers.
+8. Document assumptions and uncertainties.

@@ -1,0 +1,7 @@
+Common FMECA Mistakes:
+
+1. Confusing failure modes with causes.
+2. Ignoring system-level effects.
+3. Assigning Detection values without evidence.
+4. Blind reliance on RPN.
+5. Missing owners and deadlines for actions.

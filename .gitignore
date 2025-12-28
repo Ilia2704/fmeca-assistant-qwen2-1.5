@@ -208,3 +208,8 @@ __marimo__/
 
 # Chat history 
 .chat_history.json
+
+# Runtime data
+qdrant_storage/
+neo4j_data/
+neo4j_logs/

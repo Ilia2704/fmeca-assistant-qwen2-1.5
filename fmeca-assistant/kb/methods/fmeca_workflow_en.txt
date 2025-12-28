@@ -1,0 +1,25 @@
+FMECA Workflow:
+
+Step 1 – Preparation:
+Define objectives, scope, operating modes, environment.
+
+Step 2 – Functional Analysis:
+Identify functions for each system element.
+
+Step 3 – Failure Identification:
+List potential failure modes per function.
+
+Step 4 – Effects Analysis:
+Identify consequences at multiple levels.
+
+Step 5 – Cause Analysis:
+Identify mechanical, electrical, software, human, and environmental causes.
+
+Step 6 – Controls:
+Classify controls as preventive, detective, or mitigating.
+
+Step 7 – Risk Assessment:
+Assign S, O, D values.
+
+Step 8 – Actions:
+Define corrective or preventive actions with owners and deadlines.

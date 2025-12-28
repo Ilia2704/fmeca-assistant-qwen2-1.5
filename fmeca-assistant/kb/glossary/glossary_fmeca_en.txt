@@ -1,0 +1,32 @@
+FMEA (Failure Modes and Effects Analysis):
+A structured method for identifying potential failure modes, their causes and effects, and prioritizing actions.
+
+FMECA (Failure Modes, Effects and Criticality Analysis):
+An extension of FMEA that includes criticality assessment.
+
+Function:
+What the system or component is intended to do under defined conditions.
+
+Failure Mode:
+The manner in which a function can fail (e.g. leakage, seizure, no output).
+
+Failure Cause:
+The underlying reason why a failure mode occurs (wear, corrosion, overload).
+
+Failure Effect:
+The consequence of a failure at component, system, or end-user level.
+
+Severity (S):
+The seriousness of the effect of the failure.
+
+Occurrence (O):
+The likelihood that a failure cause will occur.
+
+Detection (D):
+The likelihood that a failure will be detected before the effect occurs.
+
+Control:
+Existing measures that prevent, detect, or mitigate failures.
+
+RPN:
+Risk Priority Number = S × O × D.
