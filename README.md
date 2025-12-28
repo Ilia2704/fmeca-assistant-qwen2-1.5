@@ -77,3 +77,16 @@ Open in browser:
 ```bash
 http://localhost:8501
 ```
+
+
+
+
+python fmeca-assistant/graph/ingest_kb_max_to_neo4j.py \
+  --json fmeca-assistant/graph/kb_max.json \
+  --root kb_max
+
+
+MATCH (s:System)-[:HAS_ELEMENT]->(e:Element)-[:HAS_FAILURE]->(f:Failure)
+OPTIONAL MATCH (f)-[:HAS_CAUSE]->(c:Cause)
+OPTIONAL MATCH (f)-[:HAS_EFFECT]->(ef:Effect)
+RETURN s,e,f,c,ef

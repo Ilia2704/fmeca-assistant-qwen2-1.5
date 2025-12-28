@@ -1,5 +1,8 @@
+# chat_core.py
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM
+
+from retrieval import build_context  # <-- добавили
 
 MODEL_NAME = "Qwen/Qwen2-1.5B-Instruct"
 
@@ -38,6 +41,22 @@ def generate(tokenizer, model, history, user_text: str, *,
              temperature: float = 0.7,
              top_p: float = 0.9,
              top_k: int = 50) -> str:
+
+    # 1) Retrieve context (Qdrant + Neo4j)
+    ctx = ""
+    try:
+        ctx = build_context(user_text, qdrant_k=5, neo4j_k=10)
+    except Exception:
+        # Минимально: не валим чат из-за базы
+        ctx = ""
+
+    # 2) Добавляем “контекст” как отдельное сообщение, чтобы сохранить модульность
+    # и не менять SYSTEM_PROMPT
+    if ctx:
+        history.append({
+            "role": "system",
+            "content": "Use the following context as reference. If it is irrelevant, ignore it.\n\n" + ctx
+        })
 
     history.append({"role": "user", "content": user_text})
 

@@ -2,9 +2,15 @@ import streamlit as st
 from chat_core import load, init_history, generate
 import json
 from pathlib import Path
+from retrieval import build_context
+import os
+from dotenv import load_dotenv
 
+st.set_page_config(page_title="assistant-qwen2-1.5 chat")
+load_dotenv(override=True)
 
 CHAT_HISTORY_FILE = Path(".chat_history.json")
+
 
 def load_chat():
     if CHAT_HISTORY_FILE.exists():
@@ -14,19 +20,26 @@ def load_chat():
             pass
     return []
 
+
 def save_chat(ui):
     CHAT_HISTORY_FILE.write_text(
         json.dumps(ui, ensure_ascii=False, indent=2),
         encoding="utf-8"
     )
 
+
 @st.cache_resource
 def get_model():
     return load()
 
+
 def main():
-    st.set_page_config(page_title="assistant-qwen2-1.5 chat")
     st.title("assistant-bot chat")
+
+    with st.sidebar:
+        st.write("QDRANT_URL", os.getenv("QDRANT_URL"))
+        st.write("QDRANT_COLLECTION", os.getenv("QDRANT_COLLECTION"))
+        st.write("NEO4J_URI", os.getenv("NEO4J_URI"))
 
     tokenizer, model = get_model()
 
@@ -61,6 +74,7 @@ def main():
     if user_text:
         st.session_state.ui.append({"role": "user", "content": user_text})
         save_chat(st.session_state.ui)
+
         with st.chat_message("user"):
             st.markdown(user_text)
 
@@ -78,6 +92,7 @@ def main():
 
         st.session_state.ui.append({"role": "assistant", "content": answer})
         save_chat(st.session_state.ui)
+
 
 if __name__ == "__main__":
     main()

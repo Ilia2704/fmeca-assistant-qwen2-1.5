@@ -1,0 +1,315 @@
+{
+  "kb_name": "FMECA Knowledge Base",
+  "language": "en",
+  "sources": [
+    {
+      "path": "fmeca-assistant/kb/templates/fmeca_table_template.md",
+      "type": "template"
+    },
+    {
+      "path": "fmeca-assistant/kb/qa/common_mistakes_en.txt",
+      "type": "qa"
+    },
+    {
+      "path": "fmeca-assistant/kb/glossary/glossary_fmeca_en.txt",
+      "type": "glossary"
+    },
+    {
+      "path": "fmeca-assistant/kb/standards/sod_scales_en.txt",
+      "type": "standard"
+    },
+    {
+      "path": "fmeca-assistant/kb/standards/fmeca_basics_en.txt",
+      "type": "standard"
+    },
+    {
+      "path": "fmeca-assistant/kb/README.md",
+      "type": "readme"
+    },
+    {
+      "path": "fmeca-assistant/kb/methods/fmeca_workflow_en.txt",
+      "type": "method"
+    },
+    {
+      "path": "fmeca-assistant/kb/methods/rpn_and_priority_en.txt",
+      "type": "method"
+    },
+    {
+      "path": "fmeca-assistant/kb/examples/example_pump_fmeca_en.md",
+      "type": "example"
+    }
+  ],
+  "principles": [
+    "Do not hallucinate missing data.",
+    "Separate failure modes from causes.",
+    "Always distinguish local, system, and end effects.",
+    "Prefer structured outputs (tables, steps, actions)."
+  ],
+  "entities": {
+    "template": {
+      "fmeca_table_columns": [
+        "Item",
+        "Function",
+        "Failure Mode",
+        "Cause",
+        "Local Effect",
+        "System Effect",
+        "End Effect",
+        "Controls",
+        "S",
+        "O",
+        "D",
+        "RPN",
+        "Recommended Actions"
+      ]
+    },
+    "glossary": {
+      "terms": [
+        {
+          "term": "FMEA (Failure Modes and Effects Analysis)",
+          "definition": "A structured method for identifying potential failure modes, their causes and effects, and prioritizing actions."
+        },
+        {
+          "term": "FMECA (Failure Modes, Effects and Criticality Analysis)",
+          "definition": "An extension of FMEA that includes criticality assessment."
+        },
+        {
+          "term": "Function",
+          "definition": "What the system or component is intended to do under defined conditions."
+        },
+        {
+          "term": "Failure Mode",
+          "definition": "The manner in which a function can fail (e.g. leakage, seizure, no output)."
+        },
+        {
+          "term": "Failure Cause",
+          "definition": "The underlying reason why a failure mode occurs (wear, corrosion, overload)."
+        },
+        {
+          "term": "Failure Effect",
+          "definition": "The consequence of a failure at component, system, or end-user level."
+        },
+        {
+          "term": "Severity (S)",
+          "definition": "The seriousness of the effect of the failure."
+        },
+        {
+          "term": "Occurrence (O)",
+          "definition": "The likelihood that a failure cause will occur."
+        },
+        {
+          "term": "Detection (D)",
+          "definition": "The likelihood that a failure will be detected before the effect occurs."
+        },
+        {
+          "term": "Control",
+          "definition": "Existing measures that prevent, detect, or mitigate failures."
+        },
+        {
+          "term": "RPN",
+          "definition": "Risk Priority Number = S × O × D."
+        }
+      ]
+    },
+    "standards": {
+      "sod_scales": {
+        "severity": [
+          {
+            "range": "10",
+            "meaning": "Hazardous, safety or regulatory violation"
+          },
+          {
+            "range": "8-9",
+            "meaning": "System shutdown or major failure"
+          },
+          {
+            "range": "5-7",
+            "meaning": "Performance degradation"
+          },
+          {
+            "range": "1-4",
+            "meaning": "Minor or negligible effect"
+          }
+        ],
+        "occurrence": [
+          {
+            "range": "10",
+            "meaning": "Almost inevitable"
+          },
+          {
+            "range": "7-9",
+            "meaning": "Frequent"
+          },
+          {
+            "range": "4-6",
+            "meaning": "Occasional"
+          },
+          {
+            "range": "1-3",
+            "meaning": "Rare"
+          }
+        ],
+        "detection": [
+          {
+            "range": "10",
+            "meaning": "No detection possible"
+          },
+          {
+            "range": "7-9",
+            "meaning": "Low detection capability"
+          },
+          {
+            "range": "4-6",
+            "meaning": "Moderate detection"
+          },
+          {
+            "range": "1-3",
+            "meaning": "Almost certain detection"
+          }
+        ]
+      },
+      "fmeca_basic_rules": [
+        "Define scope and system boundaries.",
+        "Identify system structure and functions.",
+        "Identify failure modes for each function.",
+        "Describe effects at: local level; system level; end-user / safety / business level.",
+        "Identify causes and existing controls.",
+        "Assign S, O, D using consistent scales.",
+        "Prioritize actions, not numbers.",
+        "Document assumptions and uncertainties."
+      ]
+    },
+    "methods": {
+      "fmeca_workflow": [
+        {
+          "step": 1,
+          "name": "Preparation",
+          "description": "Define objectives, scope, operating modes, environment."
+        },
+        {
+          "step": 2,
+          "name": "Functional Analysis",
+          "description": "Identify functions for each system element."
+        },
+        {
+          "step": 3,
+          "name": "Failure Identification",
+          "description": "List potential failure modes per function."
+        },
+        {
+          "step": 4,
+          "name": "Effects Analysis",
+          "description": "Identify consequences at multiple levels."
+        },
+        {
+          "step": 5,
+          "name": "Cause Analysis",
+          "description": "Identify mechanical, electrical, software, human, and environmental causes."
+        },
+        {
+          "step": 6,
+          "name": "Controls",
+          "description": "Classify controls as preventive, detective, or mitigating."
+        },
+        {
+          "step": 7,
+          "name": "Risk Assessment",
+          "description": "Assign S, O, D values."
+        },
+        {
+          "step": 8,
+          "name": "Actions",
+          "description": "Define corrective or preventive actions with owners and deadlines."
+        }
+      ],
+      "rpn_and_priority": {
+        "rpn_limitations": [
+          "Equal RPN values may represent very different risks."
+        ],
+        "best_practice_rules": [
+          "High Severity (S ≥ 9) always requires action.",
+          "Poor Detection (D ≥ 8) requires diagnostic improvement.",
+          "High Occurrence (O ≥ 7) requires root cause elimination.",
+          "Action Priority is preferred over raw RPN."
+        ]
+      }
+    },
+    "qa": {
+      "common_mistakes": [
+        "Confusing failure modes with causes.",
+        "Ignoring system-level effects.",
+        "Assigning Detection values without evidence.",
+        "Blind reliance on RPN.",
+        "Missing owners and deadlines for actions."
+      ]
+    },
+    "examples": [
+      {
+        "example_id": "example_pump_fmeca_en",
+        "system": {
+          "name": "Centrifugal Pump"
+        },
+        "functions": [
+          {
+            "name": "Deliver required flow at specified pressure."
+          }
+        ],
+        "elements": [
+          {
+            "name": "Pump",
+            "failures": [
+              {
+                "name": "Insufficient flow.",
+                "causes": [
+                  "Cavitation",
+                  "Impeller wear",
+                  "Suction blockage"
+                ],
+                "effects": {
+                  "local": [
+                    "Reduced pump output"
+                  ],
+                  "system": [
+                    "Downstream starvation"
+                  ],
+                  "end": [
+                    "Production loss"
+                  ]
+                },
+                "controls": [
+                  "Pressure and flow sensors",
+                  "Maintenance procedures"
+                ],
+                "assessment": {
+                  "S": 7,
+                  "O": 5,
+                  "D": 6,
+                  "RPN": 210
+                },
+                "recommended_actions": [
+                  "Improve suction conditions, add flow monitoring alarms."
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "graph_projection": {
+    "node_types_for_demo_graph": [
+      "System",
+      "Element",
+      "Failure",
+      "Cause",
+      "Effect"
+    ],
+    "edge_types_for_demo_graph": [
+      "HAS_ELEMENT",
+      "HAS_FAILURE",
+      "HAS_CAUSE",
+      "HAS_EFFECT"
+    ],
+    "note": "This projection matches the minimal demo graph model. Other KB content (workflow, standards, glossary) is included in this JSON for completeness, but does not have to be ingested into Neo4j."
+  }
+}
