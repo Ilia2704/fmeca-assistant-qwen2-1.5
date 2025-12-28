@@ -31,7 +31,7 @@ source .venv/bin/activate
 
 Upgrade core Python tooling:
 ```bash 
-python -m pip install -U pip wheel setuptools
+python3 -m pip install -U pip wheel setuptools
 ```
 
 Install project dependencies:

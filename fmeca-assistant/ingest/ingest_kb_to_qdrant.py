@@ -1,3 +1,5 @@
+# python3 fmeca-assistant/ingest/ingest_kb_to_qdrant.py
+
 import os
 import glob
 import uuid
