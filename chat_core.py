@@ -2,7 +2,7 @@
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM
 
-from retrieval import build_context  # <-- добавили
+from retrieval import build_context 
 
 MODEL_NAME = "Qwen/Qwen2-1.5B-Instruct"
 

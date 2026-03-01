@@ -13,6 +13,8 @@
 #   EMBED_MODEL=intfloat/multilingual-e5-small
 
 import os
+import json
+
 from typing import Any, Dict
 
 from dotenv import load_dotenv
@@ -89,7 +91,11 @@ def main() -> None:
             src = payload.get("source_file", "?")
             idx = payload.get("chunk_index", "?")
             txt = payload.get("text", "")
+            # Extract metadata without full text
+            meta = {k: v for k, v in payload.items() if k != "text"}
+
             print(f"\n{i}) score={r.score:.4f} | src={src} | chunk={idx}")
+            print("Metadata:", json.dumps(meta, ensure_ascii=False))
             print(_short(txt))
 
         print("\n")

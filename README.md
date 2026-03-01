@@ -90,3 +90,37 @@ MATCH (s:System)-[:HAS_ELEMENT]->(e:Element)-[:HAS_FAILURE]->(f:Failure)
 OPTIONAL MATCH (f)-[:HAS_CAUSE]->(c:Cause)
 OPTIONAL MATCH (f)-[:HAS_EFFECT]->(ef:Effect)
 RETURN s,e,f,c,ef
+
+
+# FMECA Knowledge Base
+
+This knowledge base supports an FMECA Assistant that helps to:
+- perform FMEA / FMECA analyses
+- identify failure modes, causes, effects, and controls
+- assess Severity, Occurrence, Detection
+- prioritize corrective actions
+- explain reasoning transparently
+
+Principles:
+1. Do not hallucinate missing data.
+2. Separate failure modes from causes.
+3. Always distinguish local, system, and end effects.
+4. Prefer structured outputs (tables, steps, actions).
+
+# Query KB 
+
+to check parameters: 
+
+```bash 
+python fmeca-assistant/ingest/dump_qdrant_info.py
+```
+
+to run "client"
+```bash
+python fmeca-assistant/ingest/query_kb.py
+```
+
+to ingest data from "kb"
+```bash
+python fmeca-assistant/ingest/ingest_kb_to_qdrant.py
+```
