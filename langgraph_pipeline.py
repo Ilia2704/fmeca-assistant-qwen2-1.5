@@ -80,7 +80,8 @@ def retrieval_node(state: PipelineState) -> PipelineState:
         return state
 
     q_hits = qdrant_search(query_en, top_k=5)
-    g_hits = neo4j_hint(query_en, limit=5)
+    #g_hits = neo4j_hint(query_en, limit=5)
+    g_hits: List[str] = []  # neo4j disabled
 
     parts: List[str] = []
     if q_hits:

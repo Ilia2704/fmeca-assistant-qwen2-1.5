@@ -3,7 +3,7 @@ from typing import List, Dict, Any
 
 from qdrant_client import QdrantClient
 from sentence_transformers import SentenceTransformer
-from db_clients import get_neo4j_driver
+#from db_clients import get_neo4j_driver
 
 QDRANT_URL = os.getenv("QDRANT_URL", "http://localhost:6333")
 QDRANT_COLLECTION = os.getenv("QDRANT_COLLECTION", "fmeca_kb_en")
@@ -67,7 +67,13 @@ def qdrant_search(query: str, *, top_k: int = 5) -> List[Dict[str, Any]]:
         )
     return out
 
-
+def neo4j_hint(query: str, *, limit: int = 10) -> List[str]:
+    """
+    Neo4j hints are disabled in this demo build.
+    We keep the function for backward compatibility, but it does not query Neo4j.
+    """
+    return []
+'''
 def neo4j_hint(query: str, *, limit: int = 10) -> List[str]:
     """
     Минимальная подсказка из графа Neo4j:
@@ -94,7 +100,7 @@ def neo4j_hint(query: str, *, limit: int = 10) -> List[str]:
                 rows.append(f"{labels}:{name}")
     return rows
 
-
+'''
 def build_context(user_text: str, *, qdrant_k: int = 5, neo4j_k: int = 10) -> str:
     q_hits = qdrant_search(user_text, top_k=qdrant_k)
     g_hits = neo4j_hint(user_text, limit=neo4j_k)
