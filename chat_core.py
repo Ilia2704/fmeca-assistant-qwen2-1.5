@@ -42,10 +42,21 @@ def generate(
     local_llm.generate_answer_en().
     """
     # Ensure model is loaded (no-op if already done)
+        # Ensure model is loaded (no-op if already done)
     _ = get_model()
 
     with track_request():
-        state_out: PipelineState = run_pipeline(user_text)
+        state_out: PipelineState = run_pipeline(
+            user_query=user_text,
+            tokenizer=tokenizer,
+            model=model,
+            history=history,
+            do_sample=do_sample,
+            max_new_tokens=max_new_tokens,
+            temperature=temperature,
+            top_p=top_p,
+            top_k=top_k,
+        )
 
     answer = state_out.get("answer_ru") or state_out.get("answer_en") or ""
     history.append({"role": "user", "content": user_text})

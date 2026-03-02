@@ -1,62 +1,91 @@
-# retrieval.py
 import os
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 
+from qdrant_client import QdrantClient
 from sentence_transformers import SentenceTransformer
-from qdrant_client.models import Filter
+from db_clients import get_neo4j_driver
 
-from db_clients import get_qdrant, get_neo4j_driver
+QDRANT_URL = os.getenv("QDRANT_URL", "http://localhost:6333")
+QDRANT_COLLECTION = os.getenv("QDRANT_COLLECTION", "fmeca_kb_en")
+EMBED_MODEL = os.getenv("EMBED_MODEL", "intfloat/multilingual-e5-small")
 
-_EMB_MODEL = None
+_client: QdrantClient | None = None
+_embedder: SentenceTransformer | None = None
+
+
+def get_qdrant() -> QdrantClient:
+    global _client
+    if _client is None:
+        _client = QdrantClient(QDRANT_URL)
+    return _client
+
 
 def get_embedder() -> SentenceTransformer:
-    global _EMB_MODEL
-    if _EMB_MODEL is None:
-        name = os.getenv("EMBED_MODEL", "intfloat/multilingual-e5-small")
-        _EMB_MODEL = SentenceTransformer(name)
-    return _EMB_MODEL
+    global _embedder
+    if _embedder is None:
+        _embedder = SentenceTransformer(EMBED_MODEL)
+    return _embedder
+
 
 def qdrant_search(query: str, *, top_k: int = 5) -> List[Dict[str, Any]]:
     client = get_qdrant()
-    collection = os.getenv("QDRANT_COLLECTION", "fmeca_kb_en")
+    collection = QDRANT_COLLECTION
     emb = get_embedder()
 
-    # E5-style: желательно префиксировать запрос
     qvec = emb.encode([f"query: {query}"], normalize_embeddings=True)[0].tolist()
 
-    hits = client.search(
+    res = client.query_points(
         collection_name=collection,
-        query_vector=qvec,
+        query=qvec,              
         limit=top_k,
         with_payload=True,
-        with_vectors=False,
-        query_filter=None,  # при желании можно фильтровать по source/type
+        with_vectors=False      
     )
+    hits = res.points         
 
-    out = []
+    out: List[Dict[str, Any]] = []
     for h in hits:
         payload = h.payload or {}
-        text = payload.get("text") or payload.get("chunk") or payload.get("content") or ""
-        source = payload.get("source") or payload.get("file") or payload.get("path") or "qdrant"
-        out.append({"score": float(h.score), "text": text, "source": source})
+        text = (
+            payload.get("text")
+            or payload.get("chunk")
+            or payload.get("content")
+            or ""
+        )
+        source = (
+            payload.get("source")
+            or payload.get("file")
+            or payload.get("path")
+            or "qdrant"
+        )
+        out.append(
+            {
+                "score": float(h.score),
+                "text": text,
+                "source": source,
+            }
+        )
     return out
+
 
 def neo4j_hint(query: str, *, limit: int = 10) -> List[str]:
     """
-    Минимальная “подсказка” из графа:
-    - если у тебя есть узлы Entity/FailureMode/Component и т.п., можно вытаскивать совпадения по name.
-    Подстрой под свою схему.
+    Минимальная подсказка из графа Neo4j:
+    - ищем любые узлы, у которых есть name или title,
+    - фильтруем по подстроке (case-insensitive),
+    - возвращаем список строк вида: ['[Label1,Label2]:имя', ...]
     """
     driver = get_neo4j_driver()
 
     cypher = """
     MATCH (n)
-    WHERE (exists(n.name) AND toLower(n.name) CONTAINS toLower($q))
-       OR (exists(n.title) AND toLower(n.title) CONTAINS toLower($q))
+    WHERE (n.name IS NOT NULL AND toLower(n.name) CONTAINS toLower($q))
+    OR (n.title IS NOT NULL AND toLower(n.title) CONTAINS toLower($q))
     RETURN labels(n) AS labels, coalesce(n.name, n.title) AS name
     LIMIT $limit
     """
-    rows = []
+
+    rows: List[str] = []
     with driver.session() as s:
         for r in s.run(cypher, q=query, limit=limit):
             labels = r["labels"] or []
@@ -64,6 +93,7 @@ def neo4j_hint(query: str, *, limit: int = 10) -> List[str]:
             if name:
                 rows.append(f"{labels}:{name}")
     return rows
+
 
 def build_context(user_text: str, *, qdrant_k: int = 5, neo4j_k: int = 10) -> str:
     q_hits = qdrant_search(user_text, top_k=qdrant_k)

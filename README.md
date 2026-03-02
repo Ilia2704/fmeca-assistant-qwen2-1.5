@@ -124,3 +124,11 @@ to ingest data from "kb"
 ```bash
 python fmeca-assistant/ingest/ingest_kb_to_qdrant.py
 ```
+
+# LangGraph 
+
+to draw Graph 
+
+```bash 
+python -c "from langgraph_pipeline import build_pipeline_graph; app = build_pipeline_graph(); print(app.get_graph().draw_ascii())"
+```

@@ -6,6 +6,9 @@ from retrieval import build_context
 import os
 from dotenv import load_dotenv
 
+from monitoring.prometheus_metrics import init_prometheus_metrics
+init_prometheus_metrics(port=8001)
+
 st.set_page_config(page_title="assistant-qwen2-1.5 chat")
 load_dotenv(override=True)
 

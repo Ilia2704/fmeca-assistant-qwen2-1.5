@@ -28,7 +28,7 @@ def load_model() -> Tuple[AutoTokenizer, AutoModelForCausalLM]:
     tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
     model = AutoModelForCausalLM.from_pretrained(
         MODEL_NAME,
-        torch_dtype=dtype,
+        dtype=dtype,
         device_map=device_map,
     )
     model.eval()
