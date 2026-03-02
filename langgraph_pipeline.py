@@ -5,10 +5,20 @@ import torch
 from langgraph.graph import StateGraph, END
 from typing_extensions import TypedDict
 
-from chat_core import SYSTEM_PROMPT, wrap_braces
 from retrieval import qdrant_search, neo4j_hint
-from translation_yandex import translate as translate_ygpt
+from tools.translation_yandex import translate as translate_ygpt
 
+SYSTEM_PROMPT = (
+    "You are a FMECA / reliability engineering assistant. "
+    "Use the provided knowledge base context when available. "
+    "If the context is insufficient, say that you are not sure "
+    "and explicitly state what information is missing."
+)
+
+
+def wrap_braces(text: str) -> str:
+    """Helper used to wrap strings in braces for logging/formatting."""
+    return "{" + text + "}"
 
 class PipelineState(TypedDict, total=False):
     user_query: str
