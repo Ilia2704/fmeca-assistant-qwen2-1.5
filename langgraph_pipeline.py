@@ -8,12 +8,39 @@ from typing_extensions import TypedDict
 from retrieval import qdrant_search, neo4j_hint
 from tools.translation_yandex import translate as translate_ygpt
 
-SYSTEM_PROMPT = (
-    "You are a FMECA / reliability engineering assistant. "
-    "Use the provided knowledge base context when available. "
-    "If the context is insufficient, say that you are not sure "
-    "and explicitly state what information is missing."
-)
+SYSTEM_PROMPT = """
+You are a FMECA (Failure Modes, Effects and Criticality Analysis) and reliability engineering assistant
+that uses an external knowledge base (KB).
+
+- Always answer in English, clearly and structurally.
+- You receive a KB `context`. Treat it as the main source of truth.
+- When the context is non-empty and related to the user topic (e.g. pumps, batteries, conveyors),
+  use it directly instead of saying there is not enough information.
+- Short or vague queries (e.g. a single word like "pump") should be interpreted as a request
+  for an FMECA-style description based on the KB context, if it is relevant.
+
+For FMECA-style questions ("failure modes for X", "function of X", "FMECA for X"):
+- If the context has relevant fragments for X, extract and present, as far as present in the KB:
+  - Function(s)
+  - Failure Modes
+  - Causes
+  - Local / System / End Effects
+  - Existing controls
+  - S, O, D, RPN
+  - Recommended actions
+- You may merge or lightly rephrase KB entries, but DO NOT invent new failure modes, causes,
+  effects or numerical ratings that are not supported by the context.
+
+Insufficient or empty context:
+- Only say that the context is insufficient if it is empty or clearly unrelated to the question.
+- If the context is partially relevant, still give your best FMECA-style answer from it and,
+  if needed, mention what extra information would refine the analysis.
+- If there is no relevant KB at all, you may give generic guidance on how to perform an FMECA
+  for such an item, clearly stating that this is general engineering advice, not KB-based.
+
+Never hallucinate detailed FMECA tables or specific numeric values that are not supported
+by the provided context.
+"""
 
 
 def wrap_braces(text: str) -> str:
@@ -88,8 +115,8 @@ def retrieval_node(state: PipelineState) -> PipelineState:
         parts.append("KB (semantic matches):")
         for i, h in enumerate(q_hits, 1):
             text = (h.get("text") or "").replace("\n", " ").strip()
-            if len(text) > 300:
-                text = text[:297] + "..."
+            if len(text) > 800:
+                text = text[:797] + "..."
             src = h.get("source")
             score = h.get("score", 0.0)
             parts.append(f"{i}. {text} (src={src}, score={score:.3f})")
@@ -134,7 +161,10 @@ def generate_en(state: PipelineState) -> PipelineState:
             f"User question (EN): {query_en}\n\n"
             "Use the following knowledge base context when answering:\n"
             f"{context}\n\n"
-            "If the context is insufficient, say that you are not sure and what information is missing."
+            "First, if the context already contains an explicit FMECA-style example for the same equipment, "
+            "summarize that example (functions, failure modes, causes, effects, controls, S/O/D/RPN, actions). "
+            "Only after that, you may optionally add short generic remarks. "
+            "Do not invent specific failure modes, causes, effects, or numerical values that are not supported by this context."
         )
     else:
         user_content = (
