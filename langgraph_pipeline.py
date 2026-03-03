@@ -100,12 +100,6 @@ def _log(state: PipelineState, message: str) -> None:
     log.info("[%s] %s", rid, message)
 
 
-def _log(state: PipelineState, message: str) -> None:
-    logs = list(state.get("logs") or [])
-    logs.append(message)
-    state["logs"] = logs
-
-
 def detect_language(state: PipelineState) -> PipelineState:
     text = (state.get("user_query") or "").strip()
     has_cyr = any("\u0400" <= ch <= "\u04FF" for ch in text)
@@ -204,6 +198,7 @@ def generate_en(state: PipelineState) -> PipelineState:
     messages.append({"role": "user", "content": user_content})
 
     device = model.device
+    
     input_ids = tokenizer.apply_chat_template(
         messages,
         tokenize=True,
@@ -224,8 +219,14 @@ def generate_en(state: PipelineState) -> PipelineState:
             }
         )
 
+    attention_mask = torch.ones_like(input_ids, dtype=torch.long, device=device)
+
     with torch.no_grad():
-        output_ids = model.generate(input_ids, **gen_kwargs)
+        output_ids = model.generate(
+            input_ids,
+            attention_mask=attention_mask,
+            **gen_kwargs,
+        )
 
     prompt_len = input_ids.shape[-1]
     gen_ids = output_ids[0, prompt_len:]

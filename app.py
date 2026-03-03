@@ -5,8 +5,15 @@ from pathlib import Path
 from retrieval import build_context
 import os
 from dotenv import load_dotenv
+import logging  
 
 from monitoring.prometheus_metrics import init_prometheus_metrics
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+)
+
 init_prometheus_metrics(port=8001)
 
 st.set_page_config(page_title="assistant-qwen2-1.5 chat")
