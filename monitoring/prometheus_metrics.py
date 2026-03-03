@@ -10,6 +10,7 @@ from prometheus_client import Gauge, Histogram, start_http_server
 REQUEST_LATENCY = Histogram(
     "fmeca_request_latency_seconds",
     "Latency of FMECA assistant requests",
+    ["request_id"],
     buckets=(0.05, 0.1, 0.2, 0.5, 1.0, 2.0, 5.0, 10.0),
 )
 
@@ -17,6 +18,7 @@ REQUEST_LATENCY = Histogram(
 REQUESTS_INFLIGHT = Gauge(
     "fmeca_requests_inflight",
     "Number of in-flight FMECA assistant requests",
+    ["request_id"],
 )
 
 # Basic process-level CPU / memory telemetry
@@ -67,19 +69,24 @@ from contextlib import contextmanager
 from time import perf_counter
 
 
+from contextlib import contextmanager
+from time import perf_counter
+
+
 @contextmanager
-def track_request():
+def track_request(request_id: str):
     """Context manager for per-request latency / in-flight metrics.
 
     Example:
-        with track_request():
+        with track_request("hello_world"):
             ... do work ...
     """
-    REQUESTS_INFLIGHT.inc()
+    labels = {"request_id": request_id}
+    REQUESTS_INFLIGHT.labels(**labels).inc()
     start = perf_counter()
     try:
         yield
     finally:
         duration = perf_counter() - start
-        REQUEST_LATENCY.observe(duration)
-        REQUESTS_INFLIGHT.dec()
+        REQUEST_LATENCY.labels(**labels).observe(duration)
+        REQUESTS_INFLIGHT.labels(**labels).dec()

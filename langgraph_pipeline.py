@@ -1,12 +1,14 @@
 from __future__ import annotations
-
 from typing import Any, Dict, List, Literal, Optional
+import logging
 import torch
 from langgraph.graph import StateGraph, END
 from typing_extensions import TypedDict
 
 from retrieval import qdrant_search, neo4j_hint
 from tools.translation_yandex import translate as translate_ygpt
+
+log = logging.getLogger("pipeline")
 
 SYSTEM_PROMPT = """
 You are a FMECA (Failure Modes, Effects and Criticality Analysis) and reliability engineering assistant
@@ -69,7 +71,33 @@ class PipelineState(TypedDict, total=False):
     model: Any
     history: List[Dict[str, str]]
 
+    # Tracing / logging
+    request_id: str
     logs: List[str]
+    node_path: List[str]
+
+
+def _log(state: PipelineState, message: str) -> None:
+    """Append message to in-memory logs and emit to logger with request id.
+
+    Also maintains a simple ordered list of visited nodes in state["node_path"],
+    assuming messages are prefixed with "[node_name]".
+    """
+    logs = list(state.get("logs") or [])
+    logs.append(message)
+    state["logs"] = logs
+
+    # Update node path from prefix like "[node_name] ..."
+    if message.startswith("[") and "]" in message:
+        node_name = message[1 : message.index("]")]
+        path = list(state.get("node_path") or [])
+        if not path or path[-1] != node_name:
+            path.append(node_name)
+            state["node_path"] = path
+
+    # Emit to structured logger with request id
+    rid = state.get("request_id", "no_request_id")
+    log.info("[%s] %s", rid, message)
 
 
 def _log(state: PipelineState, message: str) -> None:
@@ -260,25 +288,45 @@ def run_pipeline(
     model: Any,
     history: Optional[List[Dict[str, str]]] = None,
     *,
+    request_id: Optional[str] = None,
     do_sample: bool = False,
     max_new_tokens: int = 256,
     temperature: float = 0.7,
     top_p: float = 0.9,
     top_k: int = 50,
 ) -> PipelineState:
+    """Run the LangGraph pipeline for a single user query.
+
+    The optional request_id is used only for logging / monitoring.
+    If not provided, it is derived from the first 10 characters of user_query.
+    """
+    base = (user_query or "").strip()
+    rid = (request_id or (base[:10] if base else "empty_query"))
+
     init_state: PipelineState = {
         "user_query": user_query,
         "tokenizer": tokenizer,
         "model": model,
         "history": list(history or []),
+        "request_id": rid,
         "logs": [],
+        "node_path": [],
         "do_sample": do_sample,
         "max_new_tokens": max_new_tokens,
         "temperature": temperature,
         "top_p": top_p,
         "top_k": top_k,
     }
-    return PIPELINE_APP.invoke(init_state)
+
+    state_out: PipelineState = PIPELINE_APP.invoke(init_state)
+
+    path = state_out.get("node_path") or []
+    log.info(
+        "[%s] PIPELINE DONE, path=%s",
+        rid,
+        " -> ".join(path) if path else "<none>",
+    )
+    return state_out
 
 
 def print_graph_ascii() -> None:

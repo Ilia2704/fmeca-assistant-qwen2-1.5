@@ -78,8 +78,7 @@ Open in browser:
 http://localhost:8501
 ```
 
-
-
+# NEO4J store
 
 python fmeca-assistant/graph/ingest_kb_max_to_neo4j.py \
   --json fmeca-assistant/graph/kb_max.json \
