@@ -2,46 +2,67 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Tuple
+from typing import Any, Tuple  # allow non-HF backends
 
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
+try:
+    from vllm import LLM  # type: ignore
+except Exception:
+    LLM = None  # type: ignore  # vLLM is optional dependency
+
 log = logging.getLogger("local_llm")
 
 MODEL_NAME = os.getenv("LOCAL_MODEL_NAME", "Qwen/Qwen2-1.5B-Instruct")
+BACKEND = os.getenv("LOCAL_LLM_BACKEND", "hf").lower()  # "hf" or "vllm"
 
 _TOKENIZER: AutoTokenizer | None = None
-_MODEL: AutoModelForCausalLM | None = None
+_MODEL: Any | None = None  # HF model or vLLM engine
 
 
-def load_model() -> Tuple[AutoTokenizer, AutoModelForCausalLM]:
-    """Load HF tokenizer+model once and cache them."""
+def load_model() -> Tuple[AutoTokenizer, Any]:
+    """Load tokenizer+model once and cache them."""
     global _TOKENIZER, _MODEL
     if _TOKENIZER is not None and _MODEL is not None:
         return _TOKENIZER, _MODEL
 
-    log.info("Loading local model: %s", MODEL_NAME)
-    dtype = torch.float16 if torch.cuda.is_available() else torch.float32
-    device_map = "auto" if torch.cuda.is_available() else None
-
+    log.info("Loading local model: %s (backend=%s)", MODEL_NAME, BACKEND)
     tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
-    model = AutoModelForCausalLM.from_pretrained(
-        MODEL_NAME,
-        dtype=dtype,
-        device_map=device_map,
-    )
-    model.eval()
+
+    if BACKEND == "hf":
+        dtype = torch.float16 if torch.cuda.is_available() else torch.float32
+        device_map = "auto" if torch.cuda.is_available() else None
+        model = AutoModelForCausalLM.from_pretrained(
+            MODEL_NAME,
+            dtype=dtype,
+            device_map=device_map,
+        )
+        model.eval()
+    elif BACKEND == "vllm":
+        if LLM is None:
+            raise RuntimeError(
+                "vLLM is not installed but LOCAL_LLM_BACKEND=vllm"  # fail fast
+            )
+        # vLLM manages devices and paged attention internally
+        model = LLM(model=MODEL_NAME, trust_remote_code=True)  # type: ignore[arg-type]
+    else:
+        raise ValueError(f"Unsupported LOCAL_LLM_BACKEND={BACKEND!r}")
 
     _TOKENIZER, _MODEL = tokenizer, model
     return tokenizer, model
 
 
-def get_model() -> Tuple[AutoTokenizer, AutoModelForCausalLM]:
+def get_model() -> Tuple[AutoTokenizer, Any]:
     """Return cached model, loading it on first use."""
     if _TOKENIZER is None or _MODEL is None:
         return load_model()
     return _TOKENIZER, _MODEL
+
+
+def get_backend() -> str:
+    """Return active local LLM backend ("hf" or "vllm")."""
+    return BACKEND
 
 
 def generate_answer_en(

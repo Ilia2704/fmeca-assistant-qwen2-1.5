@@ -71,6 +71,11 @@ class PipelineState(TypedDict, total=False):
     model: Any
     history: List[Dict[str, str]]
 
+    backend: str
+    scenario: str
+    prompt_tokens: int
+    completion_tokens: int
+
     # Tracing / logging
     request_id: str
     logs: List[str]
@@ -158,14 +163,13 @@ def retrieval_node(state: PipelineState) -> PipelineState:
 
 
 def generate_en(state: PipelineState) -> PipelineState:
-    tokenizer = state.get("tokenizer")
-    model = state.get("model")
+    tokenizer = state["tokenizer"]
+    model = state["model"]
     history: List[Dict[str, str]] = list(state.get("history") or [])
-    if tokenizer is None or model is None:
-        raise RuntimeError("tokenizer/model not in state")
 
-    query_en = (state.get("query_en") or state.get("user_query") or "").strip()
+    query_en = (state.get("query_en") or state["user_query"]).strip()
     context = (state.get("context") or "").strip()
+    backend = (state.get("backend") or "hf").lower()  # select HF or vLLM backend
 
     do_sample = bool(state.get("do_sample", False))
     max_new_tokens = int(state.get("max_new_tokens", 256))
@@ -186,7 +190,7 @@ def generate_en(state: PipelineState) -> PipelineState:
             "First, if the context already contains an explicit FMECA-style example for the same equipment, "
             "summarize that example (functions, failure modes, causes, effects, controls, S/O/D/RPN, actions). "
             "Only after that, you may optionally add short generic remarks. "
-            "Do not invent specific failure modes, causes, effects, or numerical values that are not supported by this context."
+            "Do not invent specific failure modes, causes, or numerical values that are not supported by this context."
         )
     else:
         user_content = (
@@ -197,40 +201,73 @@ def generate_en(state: PipelineState) -> PipelineState:
 
     messages.append({"role": "user", "content": user_content})
 
-    device = model.device
-    
-    input_ids = tokenizer.apply_chat_template(
+    # Build chat prompt once; HF will tokenize it, vLLM will consume text.
+    prompt_text = tokenizer.apply_chat_template(
         messages,
-        tokenize=True,
+        tokenize=False,
         add_generation_prompt=True,
-        return_tensors="pt",
-    ).to(device)
+    )
 
-    gen_kwargs: Dict[str, Any] = {
-        "max_new_tokens": max_new_tokens,
-        "do_sample": do_sample,
-    }
-    if do_sample:
-        gen_kwargs.update(
-            {
-                "temperature": temperature,
-                "top_p": top_p,
-                "top_k": top_k,
-            }
+    prompt_tokens = 0
+    completion_tokens = 0
+
+    if backend == "hf":
+        device = model.device
+        inputs = tokenizer(prompt_text, return_tensors="pt").to(device)
+
+        gen_kwargs: Dict[str, Any] = {
+            "max_new_tokens": max_new_tokens,
+            "do_sample": do_sample,
+        }
+        if do_sample:
+            gen_kwargs.update(
+                {
+                    "temperature": temperature,
+                    "top_p": top_p,
+                    "top_k": top_k,
+                }
+            )
+
+        input_ids = inputs["input_ids"]
+        attention_mask = torch.ones_like(
+            input_ids, dtype=torch.long, device=device
         )
 
-    attention_mask = torch.ones_like(input_ids, dtype=torch.long, device=device)
+        with torch.no_grad():
+            output_ids = model.generate(
+                input_ids=input_ids,
+                attention_mask=attention_mask,
+                **gen_kwargs,
+            )
 
-    with torch.no_grad():
-        output_ids = model.generate(
-            input_ids,
-            attention_mask=attention_mask,
-            **gen_kwargs,
+        prompt_len = input_ids.shape[-1]
+        gen_ids = output_ids[0, prompt_len:]
+        raw = tokenizer.decode(gen_ids, skip_special_tokens=True).strip()
+        prompt_tokens = int(prompt_len)
+        completion_tokens = int(gen_ids.shape[-1])
+    elif backend == "vllm":
+        # vLLM uses paged attention and its own KV cache under the hood.
+        from vllm import SamplingParams  # type: ignore
+
+        sampling_params = SamplingParams(
+            max_tokens=max_new_tokens,
+            temperature=temperature if do_sample else 0.0,
+            top_p=top_p if do_sample else 1.0,
+            top_k=top_k if do_sample else -1,
         )
 
-    prompt_len = input_ids.shape[-1]
-    gen_ids = output_ids[0, prompt_len:]
-    raw = tokenizer.decode(gen_ids, skip_special_tokens=True).strip()
+        outputs = model.generate(
+            [prompt_text],
+            sampling_params=sampling_params,
+        )
+        out = outputs[0]
+        first_output = out.outputs[0]
+        raw = first_output.text.strip()
+        prompt_tokens = int(len(out.prompt_token_ids))
+        completion_tokens = int(len(first_output.token_ids))
+    else:
+        raise ValueError(f"Unknown backend in state: {backend!r}")
+
     answer_en = wrap_braces(raw)
 
     history.append({"role": "user", "content": user_content})
@@ -238,7 +275,8 @@ def generate_en(state: PipelineState) -> PipelineState:
 
     state["answer_en"] = answer_en
     state["history"] = history
-    _log(state, f"[generate_en] answer_en_len={len(answer_en)}")
+    state["prompt_tokens"] = prompt_tokens  # for Prometheus tokens metrics
+    state["completion_tokens"] = completion_tokens
     return state
 
 
@@ -290,6 +328,8 @@ def run_pipeline(
     history: Optional[List[Dict[str, str]]] = None,
     *,
     request_id: Optional[str] = None,
+    backend: str = "hf",
+    scenario: str = "interactive",
     do_sample: bool = False,
     max_new_tokens: int = 256,
     temperature: float = 0.7,
@@ -302,16 +342,18 @@ def run_pipeline(
     If not provided, it is derived from the first 10 characters of user_query.
     """
     base = (user_query or "").strip()
-    rid = (request_id or (base[:10] if base else "empty_query"))
+    rid = request_id or (base[:10] if base else "empty_query")
 
     init_state: PipelineState = {
         "user_query": user_query,
         "tokenizer": tokenizer,
         "model": model,
-        "history": list(history or []),
+        "history": history or [],
         "request_id": rid,
         "logs": [],
         "node_path": [],
+        "backend": backend,
+        "scenario": scenario,
         "do_sample": do_sample,
         "max_new_tokens": max_new_tokens,
         "temperature": temperature,

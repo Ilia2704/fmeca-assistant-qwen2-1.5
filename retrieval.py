@@ -1,6 +1,8 @@
 import os
+from threading import Lock  # guard embedder init
 from typing import List, Dict, Any
 
+import torch  # choose device for embedder
 from qdrant_client import QdrantClient
 from sentence_transformers import SentenceTransformer
 #from db_clients import get_neo4j_driver
@@ -11,6 +13,7 @@ EMBED_MODEL = os.getenv("EMBED_MODEL", "intfloat/multilingual-e5-small")
 
 _client: QdrantClient | None = None
 _embedder: SentenceTransformer | None = None
+_embedder_lock = Lock()  # ensure single init across threads
 
 
 def get_qdrant() -> QdrantClient:
@@ -23,7 +26,10 @@ def get_qdrant() -> QdrantClient:
 def get_embedder() -> SentenceTransformer:
     global _embedder
     if _embedder is None:
-        _embedder = SentenceTransformer(EMBED_MODEL)
+        with _embedder_lock:
+            if _embedder is None:
+                device = "cuda" if torch.cuda.is_available() else "cpu"  # choose device once
+                _embedder = SentenceTransformer(EMBED_MODEL, device=device)
     return _embedder
 
 

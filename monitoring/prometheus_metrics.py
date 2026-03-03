@@ -6,19 +6,39 @@ import time
 import psutil
 from prometheus_client import Gauge, Histogram, start_http_server
 
+from contextlib import contextmanager
+from time import perf_counter
+from typing import Any, Dict, Generator
+
+
 # Histogram of end-to-end request latency (seconds)
 REQUEST_LATENCY = Histogram(
     "fmeca_request_latency_seconds",
     "Latency of FMECA assistant requests",
-    ["request_id"],
+    ["request_id", "backend", "scenario"],  # bounded label cardinality
     buckets=(0.05, 0.1, 0.2, 0.5, 1.0, 2.0, 5.0, 10.0),
 )
 
-# How many requests are in-flight right now
+# Total tokens per request (prompt + completion)
+REQUEST_TOKENS = Histogram(
+    "fmeca_request_tokens_total",
+    "Total tokens per request (prompt + completion)",
+    ["request_id", "backend", "scenario"],
+    buckets=(32, 64, 128, 256, 512, 1024, 2048),
+)
+
+# Effective throughput in tokens per second
+TOKENS_PER_SECOND = Histogram(
+    "fmeca_request_tokens_per_second",
+    "Tokens per second during request",
+    ["request_id", "backend", "scenario"],
+    buckets=(5, 10, 20, 40, 80, 160, 320, 640, 1280),
+)
+
 REQUESTS_INFLIGHT = Gauge(
     "fmeca_requests_inflight",
     "Number of in-flight FMECA assistant requests",
-    ["request_id"],
+    ["request_id", "backend", "scenario"],
 )
 
 # Basic process-level CPU / memory telemetry
@@ -65,28 +85,36 @@ def _collect_process_metrics_loop() -> None:
         time.sleep(1.0)
 
 
-from contextlib import contextmanager
-from time import perf_counter
-
-
-from contextlib import contextmanager
-from time import perf_counter
-
-
 @contextmanager
-def track_request(request_id: str):
-    """Context manager for per-request latency / in-flight metrics.
-
-    Example:
-        with track_request("hello_world"):
-            ... do work ...
-    """
-    labels = {"request_id": request_id}
+def track_request(
+    request_id: str,
+    *,
+    backend: str,
+    scenario: str,
+) -> Generator[Dict[str, Any], None, None]:
+    """Track latency, inflight and token metrics for a single request."""
+    labels = {
+        "backend": backend,
+        "scenario": scenario,
+        "request_id": request_id,
+    }
     REQUESTS_INFLIGHT.labels(**labels).inc()
     start = perf_counter()
+    metrics: Dict[str, Any] = {}
     try:
-        yield
+        yield metrics
     finally:
         duration = perf_counter() - start
         REQUEST_LATENCY.labels(**labels).observe(duration)
         REQUESTS_INFLIGHT.labels(**labels).dec()
+
+        prompt_tokens = metrics.get("prompt_tokens")
+        completion_tokens = metrics.get("completion_tokens")
+        if prompt_tokens is not None and completion_tokens is not None:
+            total_tokens = int(prompt_tokens) + int(completion_tokens)
+            if total_tokens > 0:
+                REQUEST_TOKENS.labels(**labels).observe(total_tokens)
+                if duration > 0:
+                    TOKENS_PER_SECOND.labels(**labels).observe(
+                        float(total_tokens) / float(duration)
+                    )
